@@ -1,5 +1,4 @@
-// components/DOSLandingPage.js
-import React from "react";
+import React, { useEffect, useState } from "react";
 import GridGenerator from "./logoGenerator";
 
 const TVSMatrix = [
@@ -38,8 +37,32 @@ const TVSMatrix = [
 ];
 
 const DOSLandingPage = () => {
+  const [animate, setAnimate] = useState<boolean>(false);
+
+  const handleKeyPress = (event: KeyboardEvent): void => {
+    if (event.key === "Enter") {
+      setAnimate(true);
+
+      setTimeout(() => {
+        setAnimate(false);
+      }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyPress);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, []);
+
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-black p-4 font-mono text-xs text-green-500 md:text-sm">
+    <div
+      className={`flex min-h-screen w-full flex-col items-center justify-center bg-black p-4 font-mono text-xs text-green-500 md:text-sm ${
+        animate ? "animate-spin" : ""
+      }`}
+    >
       <div className="space-y-4">
         <GridGenerator grid={TVSMatrix} />
         <p className="mb-2">Software Engineer</p>
@@ -59,6 +82,12 @@ const DOSLandingPage = () => {
           <br />
           Produced by Appy
         </p>
+        <a
+          href="https://www.linkedin.com/in/tony-van-swet-39374b72/"
+          className="text-xs underline md:text-base"
+        >
+          Find me on LinkedIn
+        </a>
         <p className="mt-4">
           Which Cave Image (press ENTER to restart)?{" "}
           <span className=" h-1 animate-ping bg-green-500 ">_</span>
