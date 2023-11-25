@@ -1,4 +1,3 @@
-// GreenBlock.tsx
 interface GreenBlockProps {
   isOn: boolean;
 }
@@ -15,6 +14,9 @@ interface GridGeneratorProps {
 }
 
 const GridGenerator: React.FC<GridGeneratorProps> = ({ grid }) => {
+  if (grid.length === 0) {
+    return null;
+  }
   return (
     <div className="space-y-2">
       {grid.map((row, rowIndex) => (
