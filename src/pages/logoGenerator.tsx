@@ -14,7 +14,7 @@ interface GridGeneratorProps {
 }
 
 const GridGenerator: React.FC<GridGeneratorProps> = ({ grid }) => {
-  if (grid.length === 0) {
+  if (!grid) {
     return null;
   }
   return (
