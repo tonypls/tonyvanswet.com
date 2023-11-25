@@ -63,7 +63,7 @@ const DOSLandingPage = () => {
         animate ? "animate-spin" : ""
       }`}
     >
-      <div className="w-[600px] space-y-4">
+      <div className="w-11/12 space-y-4 md:w-[600px]">
         <GridGenerator grid={TVSMatrix} />
         <p className="mb-2">Software Engineer</p>
         <div className="border border-green-500 p-1">
