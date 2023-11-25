@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: "MS-DOS";
+  src: url("/fonts/Web437_IBM_DOS_ISO9.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
