@@ -67,8 +67,8 @@ const DOSLandingPage = () => {
         <GridGenerator grid={TVSMatrix} />
         <div className="flex flex-col items-center justify-center text-center font-sans text-xl">
           <p className="p-4  text-2xl font-bold">Software Engineer</p>
-          <div className="w-48 border border-green-500 p-1">
-            <div className="border border-green-500 p-4 text-center text-base">
+          <div className="w-48 border-2 border-x-[3px] border-green-500 p-0.5">
+            <div className="border-2 border-x-[3px] border-green-500 p-4 text-center text-base">
               <p>Portfolio Website</p>
               <p>Version 1.00</p>
             </div>
