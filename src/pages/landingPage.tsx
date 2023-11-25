@@ -59,11 +59,11 @@ const DOSLandingPage = () => {
 
   return (
     <div
-      className={`flex min-h-screen w-full flex-col items-center justify-center bg-black p-4 font-mono text-xs text-green-500 md:text-sm ${
+      className={`flex min-h-screen w-full flex-col  bg-black p-4 font-mono text-xs text-green-500 md:text-sm ${
         animate ? "animate-spin" : ""
       }`}
     >
-      <div className="space-y-4">
+      <div className="w-[600px] space-y-4">
         <GridGenerator grid={TVSMatrix} />
         <p className="mb-2">Software Engineer</p>
         <div className="border border-green-500 p-1">
