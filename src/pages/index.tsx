@@ -1,4 +1,5 @@
 import Head from "next/head";
+import DOSLandingPage from "./landingPage";
 
 export default function Home() {
   return (
@@ -8,12 +9,8 @@ export default function Home() {
         <meta name="description" content="Tony van Swet - Software & Climate" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16 ">
-          <h1 className="font-sans text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-            Tony van Swet
-          </h1>
-        </div>
+      <main className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
+        <DOSLandingPage />
       </main>
     </>
   );
