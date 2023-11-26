@@ -40,9 +40,12 @@ const DOSLandingPage = () => {
   const [animate, setAnimate] = useState<boolean>(false);
   const [playDoom, setPlayDoom] = useState<boolean>(false);
 
+  const handleStartDoom = () => {
+    setPlayDoom(true);
+  };
   const handleKeyPress = (event: KeyboardEvent): void => {
     if (event.key === "Enter") {
-      setPlayDoom(true);
+      handleStartDoom();
       // setAnimate(true);
 
       // setTimeout(() => {
@@ -68,9 +71,6 @@ const DOSLandingPage = () => {
         className={`flex min-h-screen w-full flex-col  bg-black p-4 font-mono text-xs text-green-500 md:text-sm ${
           animate ? "animate-spin" : ""
         }`}
-        onClick={() => {
-          setPlayDoom(false);
-        }}
       >
         <div className="max-w-md  space-y-4">
           <GridGenerator grid={TVSMatrix} />
@@ -102,10 +102,13 @@ const DOSLandingPage = () => {
             <a href="https://github.com/tonypls" className="underline ">
               Find me on Github
             </a>
-            <p className="mt-4 text-base" onClick={() => setPlayDoom(true)}>
+            <button
+              className="mt-4 cursor-pointer text-base"
+              onClick={handleStartDoom}
+            >
               Want to play doom (press ENTER to start)?{" "}
               <span className="h-1 animate-ping bg-green-500 ">_</span>
-            </p>
+            </button>
           </div>
         </div>
       </div>
@@ -126,9 +129,9 @@ const DOSLandingPage = () => {
           ></iframe>
           <button
             onClick={() => setPlayDoom(false)}
-            className="absolute right-2 top-2 w-14 rounded-full border-4 border-green-500 bg-black p-2 text-xl text-green-500 hover:bg-gray-700 md:right-4 md:top-4 md:p-3 md:text-2xl"
+            className="absolute right-2 top-24  flex h-12 w-12 items-center justify-center rounded-full border-4 border-green-500  bg-black  text-center text-xl text-green-500 hover:bg-gray-700  md:top-4  md:text-2xl"
           >
-            X
+            <p>X</p>
           </button>
         </div>
       )}
