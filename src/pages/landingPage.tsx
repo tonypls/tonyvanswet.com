@@ -93,7 +93,7 @@ const DOSLandingPage = () => {
           <a href="https://github.com/tonypls" className="underline ">
             Find me on Github
           </a>
-          <p className="mt-4">
+          <p className="mt-4 text-base">
             Which Cave Image (press ENTER to restart)?{" "}
             <span className="h-1 animate-ping bg-green-500 ">_</span>
           </p>
