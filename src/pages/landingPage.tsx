@@ -38,7 +38,7 @@ const TVSMatrix = [
 
 const DOSLandingPage = () => {
   const [animate, setAnimate] = useState<boolean>(false);
-  const [playDoom, setPlayDoom] = useState<boolean>(true);
+  const [playDoom, setPlayDoom] = useState<boolean>(false);
 
   const handleKeyPress = (event: KeyboardEvent): void => {
     if (event.key === "Enter") {
