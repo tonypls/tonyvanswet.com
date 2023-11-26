@@ -38,14 +38,19 @@ const TVSMatrix = [
 
 const DOSLandingPage = () => {
   const [animate, setAnimate] = useState<boolean>(false);
+  const [playDoom, setPlayDoom] = useState<boolean>(true);
 
   const handleKeyPress = (event: KeyboardEvent): void => {
     if (event.key === "Enter") {
-      setAnimate(true);
+      setPlayDoom(true);
+      // setAnimate(true);
 
-      setTimeout(() => {
-        setAnimate(false);
-      }, 1000);
+      // setTimeout(() => {
+      //   setAnimate(false);
+      // }, 1000);
+    }
+    if (event.key === "Escape") {
+      setPlayDoom(false);
     }
   };
 
@@ -58,48 +63,76 @@ const DOSLandingPage = () => {
   }, []);
 
   return (
-    <div
-      className={`flex min-h-screen w-full flex-col  bg-black p-4 font-mono text-xs text-green-500 md:text-sm ${
-        animate ? "animate-spin" : ""
-      }`}
-    >
-      <div className="max-w-md  space-y-4">
-        <GridGenerator grid={TVSMatrix} />
-        <div className="flex flex-col items-center justify-center text-center font-sans text-xl">
-          <p className="p-4  text-2xl font-bold">Software Engineer</p>
-          <div className="w-48 border-2 border-x-[3px] border-green-500 p-0.5">
-            <div className="border-2 border-x-[3px] border-green-500 p-4 text-center text-base">
-              <p>Portfolio Website</p>
-              <p>Version 1.00</p>
+    <>
+      <div
+        className={`flex min-h-screen w-full flex-col  bg-black p-4 font-mono text-xs text-green-500 md:text-sm ${
+          animate ? "animate-spin" : ""
+        }`}
+        onClick={() => {
+          setPlayDoom(false);
+        }}
+      >
+        <div className="max-w-md  space-y-4">
+          <GridGenerator grid={TVSMatrix} />
+          <div className="flex flex-col items-center justify-center text-center font-sans text-xl">
+            <p className="p-4  text-2xl font-bold">Software Engineer</p>
+            <div className="w-48 border-2 border-x-[3px] border-green-500 p-0.5">
+              <div className="border-2 border-x-[3px] border-green-500 p-4 text-center text-base">
+                <p>Portfolio Website</p>
+                <p>Version 1.00</p>
+              </div>
             </div>
-          </div>
-          <p className="p-4  text-xl">
-            (C) Copyright TVS Corp 1987
-            <br />
-            (C) Copyright Appy Ltd 2016
-          </p>
-          <p className="text-xs md:text-xl">
-            Implemented by Tony van Swet
-            <br />
-            Produced by Appy
-          </p>
-          <a
-            href="https://www.linkedin.com/in/tony-van-swet-39374b72/"
-            className="underline"
-          >
-            Find me on LinkedIn
-          </a>
+            <p className="p-4  text-xl">
+              (C) Copyright TVS Corp 1987
+              <br />
+              (C) Copyright Appy Ltd 2016
+            </p>
+            <p className="text-xs md:text-xl">
+              Implemented by Tony van Swet
+              <br />
+              Produced by Appy
+            </p>
+            <a
+              href="https://www.linkedin.com/in/tony-van-swet-39374b72/"
+              className="underline"
+            >
+              Find me on LinkedIn
+            </a>
 
-          <a href="https://github.com/tonypls" className="underline ">
-            Find me on Github
-          </a>
-          <p className="mt-4 text-base">
-            Which Cave Image (press ENTER to restart)?{" "}
-            <span className="h-1 animate-ping bg-green-500 ">_</span>
-          </p>
+            <a href="https://github.com/tonypls" className="underline ">
+              Find me on Github
+            </a>
+            <p className="mt-4 text-base">
+              Want to play doom (press ENTER to start)?{" "}
+              <span className="h-1 animate-ping bg-green-500 ">_</span>
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+      {playDoom && (
+        <div
+          className="h-full w-full"
+          onClick={() => {
+            setPlayDoom(false);
+          }}
+        >
+          <iframe
+            className="absolute left-1/2 top-1/2 h-1/2 w-full -translate-x-1/2 -translate-y-1/2 transform py-8 md:h-full md:p-8 "
+            width="680"
+            height="400"
+            src="https://dos.zone/player/?bundleUrl=https%3A%2F%2Fcdn.dos.zone%2Fcustom%2Fdos%2Fdoom.jsdos?anonymous=1"
+            data-origwidth="680"
+            data-origheight="400"
+          ></iframe>
+          <button
+            onClick={() => setPlayDoom(false)}
+            className="absolute right-2 top-2 w-14 rounded-full border-4 border-green-500 bg-black p-2 text-xl text-green-500 hover:bg-gray-700 md:right-4 md:top-4 md:p-3 md:text-2xl"
+          >
+            X
+          </button>
+        </div>
+      )}
+    </>
   );
 };
 
