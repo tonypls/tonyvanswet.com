@@ -102,7 +102,7 @@ const DOSLandingPage = () => {
             <a href="https://github.com/tonypls" className="underline ">
               Find me on Github
             </a>
-            <p className="mt-4 text-base">
+            <p className="mt-4 text-base" onClick={() => setPlayDoom(true)}>
               Want to play doom (press ENTER to start)?{" "}
               <span className="h-1 animate-ping bg-green-500 ">_</span>
             </p>
