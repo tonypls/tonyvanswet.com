@@ -136,7 +136,7 @@ const DOSLandingPage = () => {
           ></iframe>
           <button
             onClick={() => setPlayDoom(false)}
-            className="absolute right-2 top-24  flex h-12 w-12 items-center justify-center rounded-full border-4 border-green-500  bg-black  text-center text-xl text-green-500 hover:bg-gray-700  md:top-4  md:text-2xl"
+            className="absolute right-2 top-24 flex h-10  w-10 items-center justify-center rounded-full border-4 border-green-500 bg-black pl-0.5  pt-0.5  text-center text-xl text-green-500 hover:bg-gray-700  md:top-4  md:text-2xl"
           >
             <p>X</p>
           </button>
