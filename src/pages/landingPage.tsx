@@ -75,8 +75,12 @@ const DOSLandingPage = () => {
         <div className="max-w-md  space-y-4">
           <GridGenerator grid={TVSMatrix} />
           <div className="flex flex-col items-center justify-center text-center font-sans text-xl">
-            <p className="p-2  text-2xl font-bold">Tony van Swet</p>
-            <p className="p-4 pt-0  text-2xl font-bold">Software Engineer</p>
+            <p className="text-shadow-neon-green p-2 text-2xl font-bold">
+              Tony van Swet
+            </p>
+            <p className="text-shadow-neon-green p-4 pt-0 text-2xl font-bold">
+              Software Engineer
+            </p>
             <div className="w-48 border-2 border-x-[3px] border-green-500 p-0.5">
               <div className="border-2 border-x-[3px] border-green-500 p-4 text-center text-base">
                 <p>Portfolio Website</p>
@@ -89,7 +93,8 @@ const DOSLandingPage = () => {
               (C) Copyright Appy Ltd 2016
             </p>
             <p className="text-xs md:text-xl">
-              Implemented by Tony van Swet
+              Implemented by{" "}
+              <span className="text-shadow-neon-green">Tony van Swet</span>
               <br />
               Produced by Appy
             </p>
@@ -107,7 +112,8 @@ const DOSLandingPage = () => {
               className="mt-4 cursor-pointer text-base"
               onClick={handleStartDoom}
             >
-              Want to play doom (press ENTER to start)?{" "}
+              Want to play doom (press
+              <span className="text-shadow-neon-green"> ENTER</span> to start)?{" "}
               <span className="h-1 animate-ping bg-green-500 ">_</span>
             </button>
           </div>

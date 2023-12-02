@@ -7,7 +7,13 @@ export default {
       fontFamily: {
         sans: ["MS-DOS"],
       },
+      textShadow: {
+        "neon-green": "0 0 1px #00cc00, 0 0 5px #00cc00",
+      },
     },
   },
-  plugins: [],
+  variants: {
+    textShadow: ["responsive"],
+  },
+  plugins: [require("tailwindcss-textshadow")],
 } satisfies Config;
