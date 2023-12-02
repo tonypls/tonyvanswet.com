@@ -68,7 +68,7 @@ const DOSLandingPage = () => {
   return (
     <>
       <div
-        className={`flex min-h-screen w-full flex-col  bg-black p-4 font-mono text-xs text-green-500 md:text-sm ${
+        className={`flex min-h-screen w-full flex-col bg-black  p-4 pb-24 font-mono text-xs text-green-500 md:text-sm ${
           animate ? "animate-spin" : ""
         }`}
       >
