@@ -4,7 +4,9 @@ interface GreenBlockProps {
 
 const GreenBlock: React.FC<GreenBlockProps> = ({ isOn }) => (
   <div
-    className={`h-3 w-full ${isOn ? "bg-green-500" : "bg-transparent"}`}
+    className={`h-3 w-full ${
+      isOn ? "glow-shadow bg-green-500" : "bg-transparent"
+    }`}
   ></div>
 );
 

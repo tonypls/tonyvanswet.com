@@ -6,3 +6,7 @@
   font-family: "MS-DOS";
   src: url("/fonts/Web437_IBM_DOS_ISO9.woff") format("woff");
 }
+
+.glow-shadow {
+  box-shadow: 0 0 15px 1px #00cc00;
+}
