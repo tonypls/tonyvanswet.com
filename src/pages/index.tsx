@@ -1,4 +1,5 @@
 import Head from "next/head";
+import Script from "next/script";
 import DOSLandingPage from "./landingPage";
 
 export default function Home() {
@@ -17,6 +18,11 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main>
+        <Script
+          defer
+          data-domain="tonyvanswet.com"
+          src="https://plausible.io/js/script.js"
+        />
         <DOSLandingPage />
       </main>
     </>
