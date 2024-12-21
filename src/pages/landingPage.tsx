@@ -99,7 +99,7 @@ const DOSLandingPage = () => {
               Produced by Appy
             </p>
             <a
-              href="https://www.linkedin.com/in/tony-van-swet-39374b72/"
+              href="https://www.linkedin.com/in/tony-van-swet"
               className="underline"
             >
               Find me on LinkedIn
