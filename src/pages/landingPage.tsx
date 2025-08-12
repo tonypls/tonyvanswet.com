@@ -75,10 +75,10 @@ const DOSLandingPage = () => {
         <div className="max-w-md  space-y-4">
           <GridGenerator grid={TVSMatrix} />
           <div className="flex flex-col items-center justify-center text-center font-sans text-xl">
-            <p className="text-shadow-neon-green p-2 text-2xl font-bold">
+            <p className="p-2 text-2xl font-bold text-shadow-neon-green">
               Tony van Swet
             </p>
-            <p className="text-shadow-neon-green p-4 pt-0 text-2xl font-bold">
+            <p className="p-4 pt-0 text-2xl font-bold text-shadow-neon-green">
               Software Engineer
             </p>
             <div className="w-48 border-2 border-x-[3px] border-green-500 p-0.5">
@@ -130,10 +130,27 @@ const DOSLandingPage = () => {
             className="absolute left-1/2 top-1/2 h-1/2 w-full -translate-x-1/2 -translate-y-1/2 transform py-8 md:h-full md:p-8 "
             width="680"
             height="400"
-            src="https://dos.zone/player/?bundleUrl=https%3A%2F%2Fcdn.dos.zone%2Fcustom%2Fdos%2Fdoom.jsdos?anonymous=1"
+            src="https://dos.zone/doom-dec-1993/?theme=dark&nosidebar=1&nofullscreen=1&embedded=1"
+            allowFullScreen
             data-origwidth="680"
             data-origheight="400"
-          ></iframe>
+            style={{
+              border: "none",
+              borderRadius: "8px",
+              overflow: "hidden",
+            }}
+          >
+            <p>
+              Unable to load game.{" "}
+              <a
+                href="https://dos.zone/doom-dec-1993/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Click here to play Doom directly.
+              </a>
+            </p>
+          </iframe>
           <button
             onClick={() => setPlayDoom(false)}
             className="absolute right-2 top-24 flex h-10  w-10 items-center justify-center rounded-full border-4 border-green-500 bg-black pl-0.5  pt-0.5  text-center text-xl text-green-500 hover:bg-gray-700  md:top-4  md:text-2xl"
