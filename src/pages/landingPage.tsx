@@ -60,10 +60,10 @@ const DOSLandingPage = () => {
         <div className="max-w-md  space-y-4">
           <GridGenerator grid={TVSMatrix} />
           <div className="flex flex-col items-center justify-center text-center font-sans text-xl">
-            <p className="text-shadow-neon-green p-2 text-2xl font-bold">
+            <p className="p-2 text-2xl font-bold text-shadow-neon-green">
               Tony van Swet
             </p>
-            <p className="text-shadow-neon-green p-4 pt-0 text-2xl font-bold">
+            <p className="p-4 pt-0 text-2xl font-bold text-shadow-neon-green">
               Software Engineer
             </p>
             <div className="w-48 border-2 border-x-[3px] border-green-500 p-0.5">
