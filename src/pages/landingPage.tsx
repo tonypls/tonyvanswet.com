@@ -1,5 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import GridGenerator from "./logoGenerator";
+
+const DoomGame = dynamic(() => import("../components/doom/DoomGame"), {
+  ssr: false,
+});
 
 const TVSMatrix = [
   [
@@ -37,6 +42,18 @@ const TVSMatrix = [
 ];
 
 const DOSLandingPage = () => {
+  const [playDoom, setPlayDoom] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent): void => {
+      if (event.key === "Enter") setPlayDoom(true);
+    };
+    window.addEventListener("keydown", handleKeyPress);
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, []);
+
   return (
     <>
       <div className="flex min-h-screen w-full flex-col bg-black p-4 font-mono text-xs text-green-500 md:text-sm">
@@ -76,9 +93,18 @@ const DOSLandingPage = () => {
             <a href="https://github.com/tonypls" className="underline ">
               Find me on Github
             </a>
+            <button
+              className="mt-4 cursor-pointer text-base"
+              onClick={() => setPlayDoom(true)}
+            >
+              Want to play doom (press
+              <span className="text-shadow-neon-green"> ENTER</span> to start)?{" "}
+              <span className="h-1 animate-ping bg-green-500 ">_</span>
+            </button>
           </div>
         </div>
       </div>
+      {playDoom && <DoomGame onExit={() => setPlayDoom(false)} />}
     </>
   );
 };
