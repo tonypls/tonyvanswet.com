@@ -5,6 +5,7 @@ export interface Point {
 
 export interface Player {
   pos: Point;
+  z: number; // feet height in map units (64 = one cell)
   dir: number; // radians, 0 = east
   health: number;
   armor: number;
@@ -32,6 +33,7 @@ export type EnemyState = "idle" | "chase" | "pain" | "attack" | "dead";
 export interface Sprite {
   id: number;
   pos: Point;
+  z: number; // feet height in map units (64 = one cell)
   type: SpriteType;
   kind: SpriteKind;
   alive: boolean;
@@ -52,12 +54,22 @@ export interface DoorCell {
   used: boolean; // secret doors: opened once, stays open
 }
 
+export interface Trigger {
+  x: number; // cell coords
+  y: number;
+  action: "lower" | "secret"; // lower = drop the imp platform, secret = count a secret
+  secretId: number; // cells sharing an id fire (and are consumed) together
+  used: boolean;
+}
+
 export interface GameState {
   player: Player;
   sprites: Sprite[];
   doors: DoorCell[];
   walls: string[][]; // mutable: secret areas lower walls
-  triggers: Point[]; // walkover cells that lower the megaArmor island
+  floorH: number[][]; // per-cell floor heights, map units (L/K cells overridden
+  ceilH: number[][]; // by platformH/liftH — see cellFloorH in engine.ts)
+  triggers: Trigger[]; // walkover cells: secrets + the imp-platform lowerer
   keys: Set<string>;
   mouseDX: number;
   lastTime: number;
@@ -71,7 +83,10 @@ export interface GameState {
   totalItems: number;
   secrets: number;
   totalSecrets: number;
-  armorIslandDown: boolean;
+  platformH: number; // imp platform (L cells): 96 raised, -48 lowered
+  liftH: number; // the east-balcony lift (K cell): 104 up, -48 down
+  liftState: "up" | "lowering" | "down" | "raising";
+  liftTimer: number; // ms remaining in the "down" wait before raising
   message: string;
   messageTimer: number; // seconds
   flashTimer: number; // pickup flash, seconds
@@ -84,6 +99,8 @@ export interface ParsedMap {
   playerStart: { pos: Point; dir: number };
   sprites: Sprite[];
   doors: DoorCell[];
-  triggers: Point[];
+  triggers: Trigger[];
   totalSecrets: number;
+  floorH: number[][];
+  ceilH: number[][];
 }
