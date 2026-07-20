@@ -37,6 +37,7 @@ export interface Textures {
   sky: Tex;
   sprites: Record<SpriteKey, Tex>;
   gun: Tex[]; // 0 = idle, 1 = firing
+  faces: Record<string, Tex>; // `${damageLevel 0-5}_${left|center|right|fire|pain}`
 }
 
 function makeTex(w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void): Tex {
@@ -78,45 +79,74 @@ function rivets(ctx: CanvasRenderingContext2D, color: string, inset: number, w: 
 // ---------------------------------------------------------------- walls
 
 function techWall(): Tex {
+  // STARTAN3: tan/olive tech panels — the signature E1M1 wall
   return makeTex(64, 64, (ctx) => {
-    ctx.fillStyle = "#7a7a6a";
+    ctx.fillStyle = "#7d6f56";
     ctx.fillRect(0, 0, 64, 64);
     // vertical gradient grime
     const grad = ctx.createLinearGradient(0, 0, 0, 64);
-    grad.addColorStop(0, "rgba(255,255,255,0.08)");
-    grad.addColorStop(1, "rgba(0,0,0,0.28)");
+    grad.addColorStop(0, "rgba(255,255,255,0.10)");
+    grad.addColorStop(1, "rgba(0,0,0,0.30)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 64, 64);
-    // panel seams
-    ctx.fillStyle = "#4a4a40";
-    ctx.fillRect(0, 0, 64, 2);
-    ctx.fillRect(0, 32, 64, 2);
-    ctx.fillRect(31, 0, 2, 64);
-    ctx.fillRect(0, 62, 64, 2);
-    // inset panels
-    ctx.strokeStyle = "#5a5a4e";
-    ctx.strokeRect(4.5, 4.5, 23, 23);
-    ctx.strokeRect(36.5, 4.5, 23, 23);
-    ctx.strokeRect(4.5, 36.5, 23, 23);
-    ctx.strokeRect(36.5, 36.5, 23, 23);
-    rivets(ctx, "#3a3a32", 7, 64, 64);
-    speckle(ctx, 64, 64, 90, "rgba(0,0,0,0.18)");
-    speckle(ctx, 64, 64, 40, "rgba(255,255,255,0.08)");
+    // top vent strip
+    ctx.fillStyle = "#4c4234";
+    ctx.fillRect(0, 0, 64, 6);
+    ctx.fillStyle = "#2f2820";
+    for (let x = 4; x < 60; x += 8) ctx.fillRect(x, 1, 4, 4);
+    // big inset panels (STARTAN3's two stacked panels)
+    ctx.fillStyle = "#877860";
+    ctx.fillRect(4, 10, 56, 24);
+    ctx.fillRect(4, 38, 56, 22);
+    ctx.strokeStyle = "#4c4234";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(4, 10, 56, 24);
+    ctx.strokeRect(4, 38, 56, 22);
+    // panel inner bevel
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(6.5, 12.5, 51, 19);
+    ctx.strokeRect(6.5, 40.5, 51, 17);
+    // rivets on the seams
+    rivets(ctx, "#3a3226", 8, 64, 64);
+    ctx.fillStyle = "#3a3226";
+    ctx.fillRect(10, 22, 2, 2);
+    ctx.fillRect(52, 22, 2, 2);
+    ctx.fillRect(10, 48, 2, 2);
+    ctx.fillRect(52, 48, 2, 2);
+    speckle(ctx, 64, 64, 90, "rgba(0,0,0,0.16)");
+    speckle(ctx, 64, 64, 40, "rgba(255,255,255,0.07)");
   });
 }
 
 function brownWall(): Tex {
+  // BROWN1/BROWNGRN: warm tan-brown wall with small recessed panels
   return makeTex(64, 64, (ctx) => {
-    ctx.fillStyle = "#6b4a2f";
+    ctx.fillStyle = "#77593c";
     ctx.fillRect(0, 0, 64, 64);
-    ctx.fillStyle = "#54371f";
-    for (let y = 7; y < 64; y += 8) ctx.fillRect(0, y, 64, 1);
-    ctx.fillStyle = "#7d5a3a";
-    for (let y = 3; y < 64; y += 8) ctx.fillRect(0, y, 64, 1);
-    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    const grad = ctx.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, "rgba(255,255,255,0.08)");
+    grad.addColorStop(1, "rgba(0,0,0,0.30)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+    // grid of small recessed panels
+    ctx.strokeStyle = "#4a3624";
+    ctx.lineWidth = 2;
+    for (let y = 4; y < 64; y += 20) {
+      for (let x = 4; x < 64; x += 20) {
+        ctx.strokeRect(x, y, 16, 16);
+        ctx.strokeStyle = "rgba(255,255,255,0.09)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 2.5, y + 2.5, 11, 11);
+        ctx.strokeStyle = "#4a3624";
+        ctx.lineWidth = 2;
+      }
+    }
+    // grime at the bottom
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
     ctx.fillRect(0, 56, 64, 8);
-    speckle(ctx, 64, 64, 120, "rgba(0,0,0,0.22)");
-    speckle(ctx, 64, 64, 30, "rgba(255,220,160,0.10)");
+    speckle(ctx, 64, 64, 120, "rgba(0,0,0,0.20)");
+    speckle(ctx, 64, 64, 30, "rgba(255,220,160,0.09)");
   });
 }
 
@@ -241,11 +271,38 @@ function doorWall(): Tex {
   });
 }
 
+function stepFace(): Tex {
+  // STEP2-style riser face for stair edges / ledges: tan metal with a
+  // beveled top lip and a dark shadow line under it
+  return makeTex(64, 64, (ctx) => {
+    ctx.fillStyle = "#6f6250";
+    ctx.fillRect(0, 0, 64, 64);
+    const grad = ctx.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, "rgba(255,255,255,0.14)");
+    grad.addColorStop(1, "rgba(0,0,0,0.34)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+    // top lip highlight, then the shadow groove under the step edge
+    ctx.fillStyle = "#a3937a";
+    ctx.fillRect(0, 0, 64, 3);
+    ctx.fillStyle = "#2e271e";
+    ctx.fillRect(0, 3, 64, 3);
+    // panel seams + rivets
+    ctx.strokeStyle = "#453b2d";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(3, 8, 58, 52);
+    rivets(ctx, "#332b20", 7, 64, 64);
+    speckle(ctx, 64, 64, 70, "rgba(0,0,0,0.15)");
+    speckle(ctx, 64, 64, 30, "rgba(255,255,255,0.06)");
+  });
+}
+
 // ---------------------------------------------------------------- floors
 
 function concreteFloor(): Tex {
+  // FLOOR4_8: cool blue-gray concrete (start room, corridors)
   return makeTex(64, 64, (ctx) => {
-    ctx.fillStyle = "#767676";
+    ctx.fillStyle = "#6c6c74";
     ctx.fillRect(0, 0, 64, 64);
     speckle(ctx, 64, 64, 260, "rgba(0,0,0,0.16)");
     speckle(ctx, 64, 64, 140, "rgba(255,255,255,0.07)");
@@ -268,16 +325,29 @@ function darkFloor(): Tex {
 }
 
 function walkwayFloor(): Tex {
+  // FLOOR5_2: gray-tan metal tile (zig-zag room, corridors, exit rooms)
   return makeTex(64, 64, (ctx) => {
-    ctx.fillStyle = "#6a5f4a";
+    ctx.fillStyle = "#6e6558";
     ctx.fillRect(0, 0, 64, 64);
-    ctx.fillStyle = "#4a4132";
+    ctx.fillStyle = "#4c463c";
     for (let y = 15; y < 64; y += 16) ctx.fillRect(0, y, 64, 2);
     for (let x = 15; x < 64; x += 16) ctx.fillRect(x, 0, 2, 64);
-    rivets(ctx, "#3a332a", 6, 64, 64);
-    ctx.fillStyle = "rgba(255,240,200,0.08)";
+    rivets(ctx, "#3a352c", 6, 64, 64);
+    ctx.fillStyle = "rgba(255,240,200,0.07)";
     ctx.fillRect(0, 0, 64, 4);
     speckle(ctx, 64, 64, 120, "rgba(0,0,0,0.2)");
+  });
+}
+
+function dirtFloor(): Tex {
+  // FLOOR7_1: rocky brown outdoor ground
+  return makeTex(64, 64, (ctx) => {
+    ctx.fillStyle = "#5f4f3e";
+    ctx.fillRect(0, 0, 64, 64);
+    speckle(ctx, 64, 64, 200, "rgba(0,0,0,0.28)");
+    speckle(ctx, 64, 64, 120, "rgba(120,100,78,0.5)", 2);
+    speckle(ctx, 64, 64, 60, "rgba(60,48,36,0.6)", 2);
+    speckle(ctx, 64, 64, 30, "rgba(160,140,110,0.25)");
   });
 }
 
@@ -303,11 +373,25 @@ function nukageFloor(): Tex {
   });
 }
 
-function ceilingTex(): Tex {
+function blueCarpetFloor(): Tex {
+  // FLAT14: the bright blue floor of the start-room trench and computer-room steps
   return makeTex(64, 64, (ctx) => {
-    ctx.fillStyle = "#3c3c3c";
+    ctx.fillStyle = "#3d4a9e";
     ctx.fillRect(0, 0, 64, 64);
-    ctx.fillStyle = "#2c2c2c";
+    speckle(ctx, 64, 64, 180, "rgba(0,0,60,0.30)");
+    speckle(ctx, 64, 64, 80, "rgba(160,170,255,0.10)");
+    ctx.fillStyle = "rgba(0,0,40,0.35)";
+    ctx.fillRect(0, 0, 64, 2);
+    ctx.fillRect(0, 0, 2, 64);
+  });
+}
+
+function ceilingTex(): Tex {
+  // CEIL3_5: warm gray tile
+  return makeTex(64, 64, (ctx) => {
+    ctx.fillStyle = "#48443e";
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.fillStyle = "#34302c";
     ctx.fillRect(0, 0, 64, 2);
     ctx.fillRect(0, 32, 64, 2);
     ctx.fillRect(0, 0, 2, 64);
@@ -347,33 +431,39 @@ function skyTex(): Tex {
 // ---------------------------------------------------------------- sprites
 
 function zombiemanBase(ctx: CanvasRenderingContext2D, opts: { pain?: boolean }): void {
-  const skin = opts.pain ? "#c87858" : "#d8a878";
-  // legs
-  ctx.fillStyle = "#4a4a42";
-  ctx.fillRect(24, 44, 6, 18);
-  ctx.fillRect(34, 44, 6, 18);
-  // torso (uniform)
-  ctx.fillStyle = "#7a7a6a";
+  // DOOM zombieman: pale gray skin, dirty off-white uniform, brown-red hair
+  const skin = opts.pain ? "#c08878" : "#b8a898";
+  // legs (gray pants, black boots)
+  ctx.fillStyle = "#5a5a58";
+  ctx.fillRect(24, 44, 6, 16);
+  ctx.fillRect(34, 44, 6, 16);
+  ctx.fillStyle = "#2a2a2a";
+  ctx.fillRect(24, 60, 6, 3);
+  ctx.fillRect(34, 60, 6, 3);
+  // torso (dirty white uniform)
+  ctx.fillStyle = "#a8a49a";
   ctx.fillRect(22, 22, 20, 24);
-  ctx.fillStyle = "#5a5a4e";
+  ctx.fillStyle = "#8a867c";
   ctx.fillRect(22, 22, 20, 4);
+  ctx.fillStyle = "#7a766e";
+  ctx.fillRect(30, 26, 4, 20); // placket
   // arms
-  ctx.fillStyle = "#6a6a5e";
+  ctx.fillStyle = "#989488";
   ctx.fillRect(16, 24, 6, 16);
   ctx.fillRect(42, 24, 6, 16);
-  // rifle
-  ctx.fillStyle = "#2a2a2a";
+  // rifle held across the chest
+  ctx.fillStyle = "#222222";
   ctx.fillRect(18, 34, 28, 5);
   ctx.fillRect(14, 36, 6, 3);
   // head
   ctx.fillStyle = skin;
   ctx.fillRect(25, 8, 14, 14);
-  // green hair
-  ctx.fillStyle = "#3a7a2a";
+  // brown-red hair
+  ctx.fillStyle = "#6a3a22";
   ctx.fillRect(25, 6, 14, 5);
   ctx.fillRect(25, 8, 3, 8);
   // eyes
-  ctx.fillStyle = "#881111";
+  ctx.fillStyle = "#5a1010";
   ctx.fillRect(28, 14, 3, 2);
   ctx.fillRect(34, 14, 3, 2);
   if (opts.pain) {
@@ -568,42 +658,218 @@ function itemTex(kind: SpriteKey): Tex {
 function gunTex(firing: boolean): Tex {
   return makeTex(64, 64, (ctx) => {
     if (firing) {
-      // muzzle flash
-      ctx.fillStyle = "#ffee88";
-      ctx.beginPath();
-      ctx.moveTo(32, 2);
-      ctx.lineTo(36, 14);
-      ctx.lineTo(48, 10);
-      ctx.lineTo(38, 20);
-      ctx.lineTo(44, 30);
-      ctx.lineTo(32, 24);
-      ctx.lineTo(20, 30);
-      ctx.lineTo(26, 20);
-      ctx.lineTo(16, 10);
-      ctx.lineTo(28, 14);
-      ctx.closePath();
-      ctx.fill();
+      // muzzle flash: layered spikes, bright core
       ctx.fillStyle = "#ff9922";
       ctx.beginPath();
-      ctx.arc(32, 18, 6, 0, Math.PI * 2);
+      ctx.moveTo(32, 0);
+      ctx.lineTo(37, 12);
+      ctx.lineTo(50, 6);
+      ctx.lineTo(41, 18);
+      ctx.lineTo(52, 26);
+      ctx.lineTo(38, 24);
+      ctx.lineTo(34, 34);
+      ctx.lineTo(30, 34);
+      ctx.lineTo(26, 24);
+      ctx.lineTo(12, 26);
+      ctx.lineTo(23, 18);
+      ctx.lineTo(14, 6);
+      ctx.lineTo(27, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#ffee88";
+      ctx.beginPath();
+      ctx.moveTo(32, 6);
+      ctx.lineTo(36, 15);
+      ctx.lineTo(45, 12);
+      ctx.lineTo(38, 20);
+      ctx.lineTo(44, 26);
+      ctx.lineTo(35, 24);
+      ctx.lineTo(32, 30);
+      ctx.lineTo(29, 24);
+      ctx.lineTo(20, 26);
+      ctx.lineTo(26, 20);
+      ctx.lineTo(19, 12);
+      ctx.lineTo(28, 15);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#ffffcc";
+      ctx.beginPath();
+      ctx.arc(32, 19, 4, 0, Math.PI * 2);
       ctx.fill();
     }
-    // slide
-    ctx.fillStyle = "#8a8a8a";
-    ctx.fillRect(26, 22, 12, 22);
-    ctx.fillStyle = "#6a6a6a";
-    ctx.fillRect(26, 22, 3, 22);
+    const skin = "#d8a880";
+    const skinDark = "#b08860";
+    // hammer (tab at the rear of the slide)
+    ctx.fillStyle = "#1a1a20";
+    ctx.fillRect(26, 17, 3, 5);
+    // rear sight
+    ctx.fillRect(35, 17, 4, 3);
     // barrel
-    ctx.fillStyle = "#3a3a3a";
-    ctx.fillRect(30, 16, 4, 8);
-    // grip
-    ctx.fillStyle = "#4a3a2a";
-    ctx.fillRect(24, 44, 16, 18);
-    ctx.fillStyle = "#33291d";
-    ctx.fillRect(24, 44, 4, 18);
-    // trigger guard
-    ctx.fillStyle = "#5a5a5a";
-    ctx.fillRect(26, 42, 12, 4);
+    ctx.fillRect(29, 12, 6, 10);
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(31, 14, 2, 4);
+    // slide (DOOM pistol is near-black, slim)
+    ctx.fillStyle = "#2e2e34";
+    ctx.fillRect(26, 21, 12, 20);
+    ctx.fillStyle = "#4e4e58"; // top highlight
+    ctx.fillRect(27, 21, 10, 2);
+    ctx.fillStyle = "#1c1c22"; // left edge
+    ctx.fillRect(26, 21, 2, 20);
+    // rear serrations (vertical grooves at the back of the slide)
+    ctx.fillStyle = "#18181e";
+    ctx.fillRect(28, 25, 1, 13);
+    ctx.fillRect(30, 25, 1, 13);
+    ctx.fillRect(32, 25, 1, 13);
+    // frame
+    ctx.fillStyle = "#26262c";
+    ctx.fillRect(26, 41, 12, 5);
+    // trigger guard (open loop) + trigger
+    ctx.fillStyle = "#1c1c22";
+    ctx.fillRect(27, 46, 12, 2);
+    ctx.fillRect(27, 46, 2, 8);
+    ctx.fillRect(37, 46, 2, 8);
+    ctx.fillRect(29, 52, 10, 2);
+    ctx.fillStyle = "#0d0d10";
+    ctx.fillRect(31, 47, 2, 6);
+    // grip (dark brown, slight rake) with the hand wrapped around it
+    ctx.fillStyle = "#3d2c1c";
+    ctx.fillRect(26, 54, 13, 10);
+    ctx.fillStyle = "#261c10";
+    ctx.fillRect(26, 54, 3, 10);
+    // fist: thumb along the left, three finger segments over the front strap
+    ctx.fillStyle = skin;
+    ctx.fillRect(23, 50, 4, 12); // thumb/palm heel on the left
+    ctx.fillRect(37, 52, 4, 3); // fingers curling the right side
+    ctx.fillRect(37, 56, 4, 3);
+    ctx.fillRect(37, 60, 4, 3);
+    ctx.fillStyle = skinDark;
+    ctx.fillRect(23, 50, 1, 12);
+    ctx.fillRect(39, 55, 2, 1); // finger gaps
+    ctx.fillRect(39, 59, 2, 1);
+    // wrist out of the bottom of the frame
+    ctx.fillStyle = skin;
+    ctx.fillRect(27, 62, 9, 2);
+  });
+}
+
+// ------------------------------------------------------------------ HUD face
+// The iconic status-bar marine: 5 damage levels + dead, each with look
+// left/center/right, a firing grimace and a pain face.
+
+type FaceMode = "left" | "center" | "right" | "fire" | "pain";
+
+function faceTex(level: number, mode: FaceMode): Tex {
+  return makeTex(32, 40, (ctx) => {
+    const skin = level >= 4 ? "#c89878" : "#e0b090";
+    const skinDark = "#b08868";
+    const blood = "#a01414";
+    const bloodBright = "#c82020";
+    const look = mode === "left" ? -1 : mode === "right" ? 1 : 0;
+    const squint = mode === "fire" || mode === "pain" || level >= 5;
+
+    // green armor shoulder pads
+    ctx.fillStyle = "#2e5018";
+    ctx.fillRect(2, 36, 28, 4);
+    ctx.fillStyle = "#3c6820";
+    ctx.fillRect(2, 36, 28, 2);
+    // neck
+    ctx.fillStyle = skin;
+    ctx.fillRect(12, 30, 8, 8);
+    ctx.fillStyle = skinDark;
+    ctx.fillRect(12, 30, 8, 2);
+    // head
+    ctx.fillStyle = skin;
+    ctx.fillRect(9, 4, 22, 27);
+    ctx.fillRect(8, 6, 24, 23);
+    // jaw shading
+    ctx.fillStyle = skinDark;
+    ctx.fillRect(10, 28, 20, 3);
+    // hair: short dark cap + sideburns
+    ctx.fillStyle = "#241c12";
+    ctx.fillRect(9, 3, 22, 4);
+    ctx.fillRect(8, 5, 3, 10);
+    ctx.fillRect(29, 5, 3, 10);
+    ctx.fillRect(10, 2, 20, 2);
+    // angry eyebrows
+    ctx.fillStyle = "#181008";
+    ctx.fillRect(10, 12, 6, 2);
+    ctx.fillRect(11, 14, 4, 1);
+    ctx.fillRect(24, 12, 6, 2);
+    ctx.fillRect(25, 14, 4, 1);
+    // eyes
+    if (squint) {
+      ctx.fillStyle = "#181008";
+      ctx.fillRect(11, 16, 5, 1);
+      ctx.fillRect(24, 16, 5, 1);
+    } else {
+      ctx.fillStyle = "#e8e8e8";
+      ctx.fillRect(11, 15, 5, 3);
+      ctx.fillRect(24, 15, 5, 3);
+      ctx.fillStyle = "#101010";
+      ctx.fillRect(13 + look, 16, 2, 2);
+      ctx.fillRect(26 + look, 16, 2, 2);
+    }
+    // nose
+    ctx.fillStyle = skinDark;
+    ctx.fillRect(19, 17, 3, 5);
+    ctx.fillRect(18, 21, 5, 1);
+    // mouth
+    if (mode === "fire" || mode === "pain" || level >= 5) {
+      // open, teeth bared
+      ctx.fillStyle = "#401010";
+      ctx.fillRect(15, 24, 11, 5);
+      ctx.fillStyle = "#d8d8c8";
+      ctx.fillRect(16, 24, 9, 2);
+      ctx.fillStyle = "#401010";
+      ctx.fillRect(18, 24, 1, 2);
+      ctx.fillRect(21, 24, 1, 2);
+    } else {
+      ctx.fillStyle = "#704838";
+      ctx.fillRect(16, 25, 10, 1);
+      ctx.fillRect(15, 24, 1, 1);
+      ctx.fillRect(26, 24, 1, 1);
+    }
+    // blood by damage level
+    if (level >= 1) {
+      ctx.fillStyle = blood;
+      ctx.fillRect(26, 6, 3, 2);
+      ctx.fillRect(27, 8, 1, 4);
+    }
+    if (level >= 2) {
+      ctx.fillStyle = blood;
+      ctx.fillRect(19, 21, 2, 3);
+      ctx.fillRect(18, 22, 1, 2);
+    }
+    if (level >= 3) {
+      ctx.fillStyle = blood;
+      ctx.fillRect(24, 25, 2, 5);
+      ctx.fillRect(11, 7, 3, 2);
+      ctx.fillStyle = bloodBright;
+      ctx.fillRect(12, 9, 1, 3);
+    }
+    if (level >= 4) {
+      ctx.fillStyle = blood;
+      ctx.fillRect(10, 5, 6, 3);
+      ctx.fillRect(11, 13, 5, 3);
+      ctx.fillRect(15, 26, 8, 2);
+      ctx.fillStyle = bloodBright;
+      ctx.fillRect(12, 5, 2, 2);
+    }
+    if (level >= 5) {
+      // dead: X eyes, more blood, slumped mouth
+      ctx.fillStyle = "#181008";
+      ctx.fillRect(11, 14, 5, 1);
+      ctx.fillRect(11, 17, 5, 1);
+      ctx.fillRect(12, 15, 1, 3);
+      ctx.fillRect(14, 15, 1, 3);
+      ctx.fillRect(24, 14, 5, 1);
+      ctx.fillRect(24, 17, 5, 1);
+      ctx.fillRect(25, 15, 1, 3);
+      ctx.fillRect(27, 15, 1, 3);
+      ctx.fillStyle = blood;
+      ctx.fillRect(9, 5, 8, 4);
+      ctx.fillRect(22, 8, 3, 6);
+    }
   });
 }
 
@@ -622,13 +888,16 @@ export function generateTextures(): Textures {
       E: exitSwitchWall(),
       D: doorWall(),
       S: tech, // secret door blends in
-      L: brown, // armor island matches brown
+      L: brown, // imp alcove matches brown
+      "2": stepFace(), // stair risers / ledge faces (variable heights)
     },
     floors: {
       ".": concreteFloor(),
       ",": darkFloor(),
       ":": walkwayFloor(),
       "~": nukageFloor(),
+      "=": blueCarpetFloor(),
+      d: dirtFloor(),
     },
     ceiling: ceilingTex(),
     sky: skyTex(),
@@ -647,11 +916,11 @@ export function generateTextures(): Textures {
         ctx.beginPath();
         ctx.ellipse(32, 54, 20, 8, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#7a7a6a";
+        ctx.fillStyle = "#a8a49a";
         ctx.fillRect(14, 46, 30, 9);
-        ctx.fillStyle = "#d8a878";
+        ctx.fillStyle = "#b8a898";
         ctx.fillRect(44, 47, 10, 8);
-        ctx.fillStyle = "#3a7a2a";
+        ctx.fillStyle = "#6a3a22";
         ctx.fillRect(44, 45, 10, 4);
       }),
       imp: makeTex(64, 64, (ctx) => impBase(ctx, {})),
@@ -668,15 +937,16 @@ export function generateTextures(): Textures {
         ctx.fillRect(46, 48, 8, 5);
       }),
       barrel: makeTex(64, 64, (ctx) => {
-        ctx.fillStyle = "#5a6a4a";
+        // DOOM barrel: dark gray-green metal drum
+        ctx.fillStyle = "#4a5348";
         ctx.fillRect(18, 14, 28, 44);
         ctx.beginPath();
         ctx.ellipse(32, 14, 14, 4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#46543a";
+        ctx.fillStyle = "#333a32";
         ctx.fillRect(18, 22, 28, 3);
         ctx.fillRect(18, 40, 28, 3);
-        ctx.fillStyle = "#75865f";
+        ctx.fillStyle = "#5d685c";
         ctx.fillRect(21, 16, 4, 40);
         ctx.fillStyle = "#c8a820";
         ctx.beginPath();
@@ -699,5 +969,13 @@ export function generateTextures(): Textures {
       armorBonus: itemTex("armorBonus"),
     },
     gun: [gunTex(false), gunTex(true)],
+    faces: Object.fromEntries(
+      [0, 1, 2, 3, 4, 5].flatMap((level) =>
+        (["left", "center", "right", "fire", "pain"] as const).map((mode) => [
+          `${level}_${mode}`,
+          faceTex(level, mode),
+        ])
+      )
+    ),
   };
 }

@@ -110,6 +110,8 @@ export default function DoomGame({ onExit }: { onExit: () => void }) {
       if (!ui.paused) updateGame(state, time, sfx);
       else state.lastTime = time; // no dt jump when resuming
       renderGame(display, canvas.width, canvas.height, bufs, state, textures, time, ui);
+      // testing hook: lets the automated playthrough read position/health/won
+      (window as unknown as Record<string, unknown>).__doom = state;
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);

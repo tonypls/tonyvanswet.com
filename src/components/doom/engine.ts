@@ -1,4 +1,4 @@
-import { CELL_SIZE, parseMap } from "./map";
+import { CELL_SIZE, PLATFORM_CELLS, parseMap } from "./map";
 import type { DoorCell, GameState, Point, Sprite } from "./types";
 import type { SoundFX } from "./sound";
 
@@ -9,6 +9,15 @@ const MOUSE_SENS = 0.0023;
 const PLAYER_RADIUS = 12;
 const FIRE_COOLDOWN = 380; // ms
 const DOOR_OPEN_SPEED = 1.8; // fraction per second
+// Max ledge climb in map units. DOOM's rule is 24, but this grid is 64-unit
+// cells: the WAD's 16-unit stair steps pack two-to-a-cell, so a climbable
+// staircase needs a 32 allowance (a whole-map scan confirms only staircase
+// cells sit in the 24..32 band — no real cliffs open up).
+const STEP_LIMIT = 32;
+const Z_LERP = 480; // map units per second toward the floor underfoot
+const PLATFORM_SPEED = 96; // imp platform lower speed, map units per second
+const LIFT_SPEED = 96; // east-balcony lift speed, map units per second
+const LIFT_WAIT = 1200; // ms the lift waits at the bottom
 
 const ENEMY_STATS = {
   zombieman: { speed: 48, attackRange: 420, cooldown: [1100, 2200], painChance: 0.5 },
@@ -38,10 +47,19 @@ export function doorAt(state: GameState, cx: number, cy: number): DoorCell | und
   return state.doors.find((d) => d.x === cx && d.y === cy);
 }
 
+/** Floor height under a cell: the moving floors (imp platform, lift) override the grid. */
+export function cellFloorH(state: GameState, cx: number, cy: number): number {
+  const ch = cellCharAt(state, cx, cy);
+  // imp platform: L cells and any cell of its footprint (enemies/items
+  // standing on the platform replace the L char but still ride it down)
+  if (ch === "L" || PLATFORM_CELLS.has(`${cx},${cy}`)) return state.platformH;
+  if (ch === "K") return state.liftH;
+  return state.floorH[cy]?.[cx] ?? 0;
+}
+
 /** Solid for movement purposes (doors count as solid until mostly open). */
 function isSolidCell(state: GameState, cx: number, cy: number): boolean {
   const ch = cellCharAt(state, cx, cy);
-  if (ch === "L") return !state.armorIslandDown;
   if (ch === "D" || ch === "S") {
     const door = doorAt(state, cx, cy);
     return !door || door.open < 0.7;
@@ -52,7 +70,6 @@ function isSolidCell(state: GameState, cx: number, cy: number): boolean {
 /** Blocks hitscan / line of sight (doors block until nearly fully open). */
 function blocksSightCell(state: GameState, cx: number, cy: number): boolean {
   const ch = cellCharAt(state, cx, cy);
-  if (ch === "L") return !state.armorIslandDown;
   if (ch === "D" || ch === "S") {
     const door = doorAt(state, cx, cy);
     return !door || door.open < 0.85;
@@ -64,9 +81,12 @@ export function createInitialState(): GameState {
   const map = parseMap();
   const totalKills = map.sprites.filter((s) => s.type === "enemy").length;
   const totalItems = map.sprites.filter((s) => s.type === "item").length;
+  const startCx = Math.floor(map.playerStart.pos.x / CELL_SIZE);
+  const startCy = Math.floor(map.playerStart.pos.y / CELL_SIZE);
   return {
     player: {
       pos: { ...map.playerStart.pos },
+      z: map.floorH[startCy]?.[startCx] ?? 0,
       dir: map.playerStart.dir,
       health: 100,
       armor: 0,
@@ -79,6 +99,8 @@ export function createInitialState(): GameState {
     sprites: map.sprites,
     doors: map.doors,
     walls: map.walls,
+    floorH: map.floorH,
+    ceilH: map.ceilH,
     triggers: map.triggers,
     keys: new Set(),
     mouseDX: 0,
@@ -93,7 +115,10 @@ export function createInitialState(): GameState {
     totalItems,
     secrets: 0,
     totalSecrets: map.totalSecrets,
-    armorIslandDown: false,
+    platformH: 96,
+    liftH: 104,
+    liftState: "up",
+    liftTimer: 0,
     message: "",
     messageTimer: 0,
     flashTimer: 0,
@@ -146,6 +171,7 @@ function damageSprite(state: GameState, sprite: Sprite, amount: number, sfx: Sou
       state.sprites.push({
         id: Math.max(...state.sprites.map((s) => s.id), 0) + 1,
         pos: { ...sprite.pos },
+        z: sprite.z,
         type: "item",
         kind: "clip",
         alive: true,
@@ -175,6 +201,7 @@ function explodeBarrel(state: GameState, barrel: Sprite, sfx: SoundFX, visited: 
   state.sprites.push({
     id: Math.max(...state.sprites.map((s) => s.id), 0) + 1,
     pos: { ...barrel.pos },
+    z: barrel.z,
     type: "effect",
     kind: "explosion",
     alive: true,
@@ -211,7 +238,7 @@ function hitscan(
   const sin = Math.sin(dir);
   let x = from.x;
   let y = from.y;
-  for (let traveled = 0; traveled < 1400; traveled += step) {
+  for (let traveled = 0; traveled < 2200; traveled += step) {
     x += cos * step;
     y += sin * step;
     const cx = Math.floor(x / CELL_SIZE);
@@ -273,7 +300,18 @@ export function useAction(state: GameState, sfx: SoundFX): void {
     if (ch === "S") {
       const door = doorAt(state, cx, cy);
       if (door && !door.used) {
+        // a secret door opens as a whole: mark every connected slab
         door.used = true;
+        const group = [door];
+        for (const g of group) {
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+            const n = doorAt(state, g.x + dx, g.y + dy);
+            if (n?.secret && !n.used) {
+              n.used = true;
+              group.push(n);
+            }
+          }
+        }
         state.secrets++;
         sfx.secret();
         setMessage(state, "A secret is revealed!");
@@ -288,25 +326,40 @@ export function useAction(state: GameState, sfx: SoundFX): void {
 function tryMovePlayer(state: GameState, newX: number, newY: number): void {
   const p = state.player;
   const r = PLAYER_RADIUS;
-  const solid = (x: number, y: number) =>
-    isSolidCell(state, Math.floor(x / CELL_SIZE), Math.floor(y / CELL_SIZE));
+  // A corner blocks when its cell is a wall/door, or when its floor is more
+  // than STEP_LIMIT above the player's feet (drops of any depth are fine).
+  const blocked = (x: number, y: number) => {
+    const cx = Math.floor(x / CELL_SIZE);
+    const cy = Math.floor(y / CELL_SIZE);
+    if (isSolidCell(state, cx, cy)) return true;
+    return cellFloorH(state, cx, cy) - p.z > STEP_LIMIT;
+  };
 
   if (
-    !solid(newX - r, p.pos.y - r) &&
-    !solid(newX + r, p.pos.y - r) &&
-    !solid(newX - r, p.pos.y + r) &&
-    !solid(newX + r, p.pos.y + r)
+    !blocked(newX - r, p.pos.y - r) &&
+    !blocked(newX + r, p.pos.y - r) &&
+    !blocked(newX - r, p.pos.y + r) &&
+    !blocked(newX + r, p.pos.y + r)
   ) {
     p.pos.x = newX;
   }
   if (
-    !solid(p.pos.x - r, newY - r) &&
-    !solid(p.pos.x + r, newY - r) &&
-    !solid(p.pos.x - r, newY + r) &&
-    !solid(p.pos.x + r, newY + r)
+    !blocked(p.pos.x - r, newY - r) &&
+    !blocked(p.pos.x + r, newY - r) &&
+    !blocked(p.pos.x - r, newY + r) &&
+    !blocked(p.pos.x + r, newY + r)
   ) {
     p.pos.y = newY;
   }
+}
+
+/** Glide the player's feet toward the floor under them (stairs, drops, lifts). */
+function updatePlayerZ(state: GameState, dt: number): void {
+  const p = state.player;
+  const target = cellFloorH(state, Math.floor(p.pos.x / CELL_SIZE), Math.floor(p.pos.y / CELL_SIZE));
+  const dz = target - p.z;
+  const step = Z_LERP * dt;
+  p.z += Math.abs(dz) <= step ? dz : Math.sign(dz) * step;
 }
 
 /** Pickups and walkover triggers — checked every tick, even when standing still. */
@@ -317,6 +370,7 @@ function checkCellInteractions(state: GameState, sfx: SoundFX): void {
   for (const s of state.sprites) {
     if (!s.alive || s.type !== "item") continue;
     if (distance(p.pos, s.pos) >= 26) continue;
+    if (Math.abs(p.z - s.z) >= 48) continue; // on a ledge far above/below
     const pickUp = (msg: string, bonus = false): void => {
       s.alive = false;
       state.items++;
@@ -373,18 +427,19 @@ function checkCellInteractions(state: GameState, sfx: SoundFX): void {
     }
   }
 
-  // secret trigger cells: lower the megaarmor island
-  if (!state.armorIslandDown) {
-    const cx = Math.floor(p.pos.x / CELL_SIZE);
-    const cy = Math.floor(p.pos.y / CELL_SIZE);
-    if (state.triggers.some((t) => t.x === cx && t.y === cy)) {
-      state.armorIslandDown = true;
+  // walkover triggers: secret areas and the imp platform in the nukage pool
+  const cx = Math.floor(p.pos.x / CELL_SIZE);
+  const cy = Math.floor(p.pos.y / CELL_SIZE);
+  for (const t of state.triggers) {
+    if (t.used || t.x !== cx || t.y !== cy) continue;
+    // stepping on any cell of a trigger group consumes the whole group
+    for (const o of state.triggers) if (o.secretId === t.secretId) o.used = true;
+    if (t.action === "lower") {
+      // the platform itself animates down in updateGame (platformH)
+      sfx.door();
+      setMessage(state, "A platform lowers somewhere.");
+    } else {
       state.secrets++;
-      for (const row of state.walls) {
-        for (let x = 0; x < row.length; x++) {
-          if (row[x] === "L") row[x] = ",";
-        }
-      }
       sfx.secret();
       setMessage(state, "A secret is revealed!");
     }
@@ -437,14 +492,80 @@ function updateDoors(state: GameState, dtMs: number, sfx: SoundFX): void {
   }
 }
 
+/**
+ * The two moving floors of E1M1: the imp platform (L cells, lowered by the
+ * dark-room walkover trigger, WAD linedef 308) and the east-balcony lift
+ * (K cell, WAD sector 70: lowers when the player comes close, waits, rises).
+ */
+function updateMovingFloors(state: GameState, dtMs: number, sfx: SoundFX): void {
+  const dt = dtMs / 1000;
+
+  // imp platform: once the trigger fired, sink 96 -> -48 and stay
+  const lowerUsed = state.triggers.some((t) => t.action === "lower" && t.used);
+  if (lowerUsed && state.platformH > -48) {
+    state.platformH = Math.max(-48, state.platformH - PLATFORM_SPEED * dt);
+  }
+
+  // find the lift cell (there is exactly one K)
+  let kx = -1;
+  let ky = -1;
+  outer: for (let y = 0; y < state.walls.length; y++) {
+    for (let x = 0; x < (state.walls[y]?.length ?? 0); x++) {
+      if (state.walls[y]?.[x] === "K") {
+        kx = x;
+        ky = y;
+        break outer;
+      }
+    }
+  }
+  if (kx < 0) return;
+  const near =
+    !state.player.dead &&
+    distance({ x: (kx + 0.5) * CELL_SIZE, y: (ky + 0.5) * CELL_SIZE }, state.player.pos) <
+      CELL_SIZE * 1.3;
+
+  switch (state.liftState) {
+    case "up":
+      if (near) {
+        state.liftState = "lowering";
+        sfx.door();
+      }
+      break;
+    case "lowering":
+      state.liftH = Math.max(-48, state.liftH - LIFT_SPEED * dt);
+      if (state.liftH <= -48) {
+        state.liftState = "down";
+        state.liftTimer = LIFT_WAIT;
+      }
+      break;
+    case "down":
+      state.liftTimer -= dtMs;
+      if (state.liftTimer <= 0) {
+        state.liftState = "raising";
+        sfx.door();
+      }
+      break;
+    case "raising":
+      state.liftH = Math.min(104, state.liftH + LIFT_SPEED * dt);
+      if (state.liftH >= 104) state.liftState = "up";
+      break;
+  }
+}
+
 function moveEnemy(state: GameState, sprite: Sprite, angle: number, speed: number, dt: number): void {
   const nx = sprite.pos.x + Math.cos(angle) * speed * dt;
   const ny = sprite.pos.y + Math.sin(angle) * speed * dt;
   const r = 10;
-  const solid = (x: number, y: number) =>
-    isSolidCell(state, Math.floor(x / CELL_SIZE), Math.floor(y / CELL_SIZE));
-  if (!solid(nx - r, sprite.pos.y) && !solid(nx + r, sprite.pos.y)) sprite.pos.x = nx;
-  if (!solid(sprite.pos.x, ny - r) && !solid(sprite.pos.x, ny + r)) sprite.pos.y = ny;
+  // monsters climb at most STEP_LIMIT too; drops are free (they follow the
+  // floor height under them, so a ledge they step off becomes a fall)
+  const blocked = (x: number, y: number) => {
+    const cx = Math.floor(x / CELL_SIZE);
+    const cy = Math.floor(y / CELL_SIZE);
+    if (isSolidCell(state, cx, cy)) return true;
+    return cellFloorH(state, cx, cy) - sprite.z > STEP_LIMIT;
+  };
+  if (!blocked(nx - r, sprite.pos.y) && !blocked(nx + r, sprite.pos.y)) sprite.pos.x = nx;
+  if (!blocked(sprite.pos.x, ny - r) && !blocked(sprite.pos.x, ny + r)) sprite.pos.y = ny;
 }
 
 function updateEnemy(state: GameState, sprite: Sprite, time: number, dt: number, sfx: SoundFX): void {
@@ -473,6 +594,7 @@ function updateEnemy(state: GameState, sprite: Sprite, time: number, dt: number,
           state.sprites.push({
             id: Math.max(...state.sprites.map((s) => s.id), 0) + 1,
             pos: { ...sprite.pos },
+            z: sprite.z + 24, // launched from the hands, not the floor
             type: "projectile",
             kind: "fireball",
             alive: true,
@@ -543,6 +665,7 @@ export function updateGame(state: GameState, time: number, sfx: SoundFX): void {
   if (p.attackTimer > 0) p.attackTimer -= dt;
 
   updateDoors(state, dtMs, sfx);
+  updateMovingFloors(state, dtMs, sfx);
 
   if (!p.dead && !state.won) {
     // rotation: arrow keys + mouse
@@ -568,6 +691,7 @@ export function updateGame(state: GameState, time: number, sfx: SoundFX): void {
       const sin = Math.sin(p.dir);
       tryMovePlayer(state, p.pos.x + cos * mf - sin * ms, p.pos.y + sin * mf + cos * ms);
     }
+    updatePlayerZ(state, dt);
     checkCellInteractions(state, sfx);
 
     if (state.firing) fireWeapon(state, time, sfx);
@@ -581,6 +705,14 @@ export function updateGame(state: GameState, time: number, sfx: SoundFX): void {
     if (sprite.type === "enemy" && !p.dead && !state.won) updateEnemy(state, sprite, time, dt, sfx);
     else if (sprite.type === "projectile") updateProjectile(state, sprite, dt, sfx);
     else if (sprite.type === "effect" && sprite.stateTime > 450) sprite.alive = false;
+    // enemies ride the floor under them (stairs, the lowering imp platform,
+    // the lift); items and projectiles keep the z they spawned with
+    if (sprite.type === "enemy") {
+      const target = cellFloorH(state, Math.floor(sprite.pos.x / CELL_SIZE), Math.floor(sprite.pos.y / CELL_SIZE));
+      const dz = target - sprite.z;
+      const step = Z_LERP * dt;
+      sprite.z += Math.abs(dz) <= step ? dz : Math.sign(dz) * step;
+    }
   }
 
   // drop picked-up items, exploded barrels, dead projectiles and finished effects
