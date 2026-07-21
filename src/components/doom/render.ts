@@ -210,23 +210,44 @@ export function renderScene(bufs: RenderBuffers, state: GameState, tex: Textures
       const skyCell = isSkyCell(mapX, mapY);
       lastSky = skyCell;
 
-      // ---------------- door slab: a full-height face mid-cell, sliding open
-      let slab: { t: number; tex: Tex; u: number } | null = null;
+      // ---------------- door slab: a full-height face, sliding open
+      let slab: { t: number; tex: Tex; u: number; ns: boolean; spanTop: number; spanBot: number } | null = null;
       if (ch === "D" || ch === "S") {
         const door = state.doors.find((d) => d.x === mapX && d.y === mapY);
         const open = door?.open ?? 0;
-        if (open < 0.999) {
-          if (door?.axis === "ew") {
-            const t = (mapX + 0.5 - px) / rdx;
-            if (t > tEnter + 1e-9) {
-              const frac = py + t * rdy - mapY;
-              if (frac >= open) slab = { t, tex: tex.walls[ch] ?? tex.walls["#"]!, u: (frac - open) * 64 };
+        if (door && tEnter > 1e-6) {
+          const slabTex = tex.walls[ch] ?? tex.walls["#"]!;
+          // the vertical span as the ray enters the door cell, before the
+          // cell's own floor/ceiling clamps: the panel is clipped by NEARER
+          // geometry only — the cell's far-edge clamps would shave its
+          // top/bottom edges unevenly column by column
+          const spanTop = topY;
+          const spanBot = botY;
+          const inGroup = (x: number, y: number): boolean => {
+            const n = state.doors.find((d) => d.x === x && d.y === y);
+            return n !== undefined && n.secret === door.secret;
+          };
+          const fromGroup = inGroup(mapX - (side === 0 ? stepX : 0), mapY - (side === 1 ? stepY : 0));
+          if (inGroup(mapX + (side === 0 ? stepX : 0), mapY + (side === 1 ? stepY : 0))) {
+            // a group sibling straight ahead: this cell is the skin of a
+            // multi-cell-deep block and its face sits at the block's boundary
+            // (the entry plane), so the block reads as a clean box. Cells
+            // reached from a sibling are the block's interior and stay hollow.
+            if (!fromGroup && open < 0.999) {
+              const frac = (side === 0 ? py + tEnter * rdy : px + tEnter * rdx) - (side === 0 ? mapY : mapX);
+              if (frac >= open && frac <= 1) slab = { t: tEnter, tex: slabTex, u: (frac - open) * 64, ns: side === 1, spanTop, spanBot };
             }
           } else {
-            const t = (mapY + 0.5 - py) / rdy;
+            // single-deep door: the panel sits mid-cell and slides open (the
+            // last sliver stays tucked at the track's end, DOOM-pocket style).
+            // The crossing must land inside the cell ([open, 1]); when it lies
+            // beyond, the ray continues to a group sibling's panel or out past
+            // the jamb — capping it here would create false faces.
+            const slideOpen = Math.min(open, 0.9);
+            const t = door.axis === "ew" ? (mapX + 0.5 - px) / rdx : (mapY + 0.5 - py) / rdy;
             if (t > tEnter + 1e-9) {
-              const frac = px + t * rdx - mapX;
-              if (frac >= open) slab = { t, tex: tex.walls[ch] ?? tex.walls["#"]!, u: (frac - open) * 64 };
+              const frac = door.axis === "ew" ? py + t * rdy - mapY : px + t * rdx - mapX;
+              if (frac >= slideOpen && frac <= 1) slab = { t, tex: slabTex, u: (frac - slideOpen) * 64, ns: door.axis === "ns", spanTop, spanBot };
             }
           }
         }
@@ -378,9 +399,15 @@ export function renderScene(bufs: RenderBuffers, state: GameState, tex: Textures
       }
       if (slab) {
         const ui = Math.min(63, Math.max(0, Math.floor(slab.u)));
-        const shade = shadeFor(slab.t, wallOutdoor(mapX, mapY));
+        // slab faces share the walls' fake AO: north/south-facing ones darker
+        let shade = shadeFor(slab.t, wallOutdoor(mapX, mapY));
+        if (slab.ns) shade = (shade * 3) >> 2;
         const ppc = PROJ_DIST / slab.t;
-        for (let y = topY; y <= botY; y++) {
+        // the panel spans the door cell's floor..ceiling at the SLAB's own
+        // distance, clipped only by nearer geometry (spanTop/spanBot)
+        const yTop = Math.max(slab.spanTop, Math.ceil(yOf(state.ceilH[mapY]?.[mapX] ?? 216, slab.t)));
+        const yBot = Math.min(slab.spanBot, Math.floor(yOf(cellFloorH(state, mapX, mapY), slab.t)));
+        for (let y = yTop; y <= yBot; y++) {
           const h = eyeZ - ((y - HORIZON) * 64) / ppc;
           const v = Math.floor(((((-h % 64) + 64) % 64) / 64) * slab.tex.h) % slab.tex.h;
           pixels[y * VIEW_W + x] = shadeColor(slab.tex.data[v * slab.tex.w + ui] ?? 0xff000000, shade);
